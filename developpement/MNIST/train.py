@@ -12,7 +12,7 @@ from tqdm import tqdm
 from model import MNISTNet
 
  # setting device on GPU if available, else CPU
-  device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def train(net, optimizer, loader, epochs=10):
     criterion = nn.CrossEntropyLoss()
@@ -41,3 +41,41 @@ def test(model, dataloader):
             total += y.size(0)
     return test_corrects / total
 	
+if __name__=='__main__':
+
+  parser = argparse.ArgumentParser()
+
+  parser.add_argument('--exp_name', type=str, default = 'MNIST', help='experiment name')
+  parser.add_argument('--epochs', type=int, default = 10, help='number of epochs')
+  parser.add_argument('--batch_size', type=int, default = 32, help='batch size')
+  parser.add_argument('--lr', type=float, default = 0.001, help='learning rate')
+
+  args = parser.parse_args()
+  exp_name = args.exp_name
+  epochs = args.epochs
+  batch_size = args.batch_size
+  lr = args.lr
+
+
+  # transforms
+  transform = transforms.Compose(
+      [transforms.ToTensor(),
+      transforms.Normalize((0.5,), (0.5,))])
+
+  # datasets
+  trainset = torchvision.datasets.MNIST('./data', download=True, train=True, transform=transform)
+  testset = torchvision.datasets.MNIST('./data', download=True, train=False, transform=transform)
+
+  # dataloaders
+  trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=2)
+  testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=2)
+
+  net = MNISTNet()
+  # setting net on device(GPU if available, else CPU)
+  net = net.to(device)
+  optimizer = optim.SGD(net.parameters(), lr=lr, momentum=0.9)
+
+  train(net=net, optimizer=optimizer, loader=trainloader, epochs=epochs)
+  test_acc = test(model=net, dataloader=testloader)
+  print(f'Test accuracy:{test_acc}')
+  torch.save(net.state_dict(), 'weights/mnist_net.pth')
